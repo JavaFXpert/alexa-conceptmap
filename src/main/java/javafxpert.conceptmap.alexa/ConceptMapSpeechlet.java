@@ -210,7 +210,7 @@ public class ConceptMapSpeechlet implements Speechlet {
     }
 
     private SpeechletResponse getWelcomeResponse() {
-        String whichCityPrompt = "Which coastal village would you like tide information for?";
+        String whichCityPrompt = "Which coastal metropolis would you like tide information for?";
         String speechOutput = "<speak>"
                 + "Welcome to Concept Map. "
                 + whichCityPrompt
