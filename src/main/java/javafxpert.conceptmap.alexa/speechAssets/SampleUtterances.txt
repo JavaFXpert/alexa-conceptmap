@@ -1,7 +1,7 @@
 DialogTideIntent {Item}
 
+OneshotTideIntent get teams for {Item}
 OneshotTideIntent get high tide
-OneshotTideIntent get high tide for {Item}
 OneshotTideIntent get high tide for {City} {State} {Date}
 OneshotTideIntent get high tide for {City} {Date}
 OneshotTideIntent get high tide for {Date}

@@ -90,6 +90,7 @@ public class ConceptMapSpeechlet implements Speechlet {
 
     private static final String SLOT_CITY = "City";
     private static final String SLOT_DATE = "Date";
+    private static final String SLOT_ITEM = "Item";
     private static final String SESSION_CITY = "city";
     private static final String SESSION_STATION = "station";
     private static final String SESSION_DATE_DISPLAY = "displayDate";
@@ -169,18 +170,39 @@ public class ConceptMapSpeechlet implements Speechlet {
         Intent intent = request.getIntent();
         String intentName = intent.getName();
 
+        Slot itemSlot = intent.getSlot(SLOT_ITEM);
+        Slot citySlot = intent.getSlot(SLOT_CITY);
+        Slot dateSlot = intent.getSlot(SLOT_DATE);
+        if (itemSlot != null && itemSlot.getValue() != null) {
+            log.info("I received an Item request: " + itemSlot.getValue());
+        }
+        else if (citySlot != null && citySlot.getValue() != null) {
+            log.info("I received a City request: " + citySlot.getValue());
+        }
+        else if (dateSlot != null && dateSlot.getValue() != null) {
+            log.info("I received a Date request: " + dateSlot.getValue());
+        }
+        else {
+            log.info("I'm not sure if I received a request");
+        }
+
+
         if ("OneshotTideIntent".equals(intentName)) {
             return handleOneshotTideRequest(intent, session);
         } else if ("DialogTideIntent".equals(intentName)) {
             // Determine if this turn is for city, for date, or an error.
             // We could be passed slots with values, no slots, slots with no value.
-            Slot citySlot = intent.getSlot(SLOT_CITY);
-            Slot dateSlot = intent.getSlot(SLOT_DATE);
+            citySlot = intent.getSlot(SLOT_CITY);
+            dateSlot = intent.getSlot(SLOT_DATE);
             if (citySlot != null && citySlot.getValue() != null) {
+                log.info("Received a City request: " + citySlot.getValue());
                 return handleCityDialogRequest(intent, session);
-            } else if (dateSlot != null && dateSlot.getValue() != null) {
+            }
+            else if (dateSlot != null && dateSlot.getValue() != null) {
+                log.info("Received a Date request: " + dateSlot.getValue());
                 return handleDateDialogRequest(intent, session);
-            } else {
+            }
+            else {
                 return handleNoSlotDialogRequest(intent, session);
             }
         } else if ("SupportedCitiesIntent".equals(intentName)) {

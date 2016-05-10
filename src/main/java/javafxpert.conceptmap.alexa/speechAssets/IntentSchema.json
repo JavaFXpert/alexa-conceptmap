@@ -35,7 +35,12 @@
         {
           "name": "Date",
           "type": "AMAZON.DATE"
+        },
+        {
+          "name": "Item",
+          "type": "string"
         }
+
       ]
     },
     {
