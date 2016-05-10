@@ -32,7 +32,7 @@ public class ConceptMapSpeechletRequestStreamHandler extends SpeechletRequestStr
          * Alexa Skill and put the relevant Application Ids in this Set.
          */
         supportedApplicationIds = new HashSet<String>();
-        // supportedApplicationIds.add("amzn1.echo-sdk-ams.app.[unique-value-here]");
+        supportedApplicationIds.add("amzn1.echo-sdk-ams.app.24713bc9-5eab-4604-bb8a-5f182f70ddb0");
     }
 
     public ConceptMapSpeechletRequestStreamHandler() {
