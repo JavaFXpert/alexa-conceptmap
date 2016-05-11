@@ -49,6 +49,16 @@ public class ClaimsInfo {
     this.itemLabels = itemLabels;
   }
 
+  public String toItemLabelsSpeech() {
+    StringBuffer itemLabelsSpeech = new StringBuffer();
+    if (itemLabels.size() > 1) {
+      for (int i = 0; i < itemLabels.size(); i++) {
+        itemLabelsSpeech.append(itemLabels.get(i) + "\n");
+      }
+    }
+    return itemLabelsSpeech.toString();
+  }
+
   @java.lang.Override
   public java.lang.String toString() {
     return "ClaimsInfo{" +

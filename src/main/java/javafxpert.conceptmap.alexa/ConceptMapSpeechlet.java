@@ -31,6 +31,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+//import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 
@@ -83,7 +84,8 @@ public class ConceptMapSpeechlet implements Speechlet {
 
   private static final String SLOT_RELATIONSHIP = "Relationship";
   private static final String SLOT_ITEM = "Item";
-  private static final String ENDPOINT = "https://conceptmap.cfapps.io/traversal";
+  private static final String TRAVERSAL_ENDPOINT = "https://conceptmap.cfapps.io/traversal";
+  private static final String ID_LOCATOR_ENDPOINT = "https://conceptmap.cfapps.io/idlocator";
 
   @Override
   public void onSessionStarted(final SessionStartedRequest request, final Session session)
@@ -200,9 +202,8 @@ public class ConceptMapSpeechlet implements Speechlet {
       speechOutput =
           "Item is " + itemSlot.getValue() + "and relationship is " + relSlot.getValue();
 
-      //return newAskResponse(speechOutput, speechOutput);
-    //TODO: translate requested item and relationship to Q and P numbers
-    return makeClaimsRequest("Q615", "P54");
+    //return makeClaimsRequest("Q615", "P54");
+    return makeClaimsRequest(itemSlot.getValue(), relSlot.getValue());
   }
 
   /**
@@ -210,45 +211,66 @@ public class ConceptMapSpeechlet implements Speechlet {
    *
    * @throws IOException
    */
-  private SpeechletResponse makeClaimsRequest(String itemId, String propId) {
+  //private SpeechletResponse makeClaimsRequest(String itemId, String propId) {
+  private SpeechletResponse makeClaimsRequest(String itemValue, String relationshipValue) {
+    String speechOutput = "";
+
+    // Translate requested item and relationship to Q and P numbers
+    //String itemId = "Q887401";
+    String propId = "P54";
+    String itemId = locateItemId(itemValue);
+    if (itemId != null && itemId.length() > 0) {
+
       String queryString =
           String.format("?id=%s&direction=f&prop=%s&depth=1", itemId, propId);
 
-      String speechOutput = "";
 
       InputStreamReader inputStream = null;
       BufferedReader bufferedReader = null;
       StringBuilder builder = new StringBuilder();
       try {
-          String line;
-          URL url = new URL(ENDPOINT + queryString);
-          inputStream = new InputStreamReader(url.openStream(), Charset.forName("US-ASCII"));
-          bufferedReader = new BufferedReader(inputStream);
-          while ((line = bufferedReader.readLine()) != null) {
-              builder.append(line);
-          }
+        String line;
+        URL url = new URL(TRAVERSAL_ENDPOINT + queryString);
+        inputStream = new InputStreamReader(url.openStream(), Charset.forName("US-ASCII"));
+        bufferedReader = new BufferedReader(inputStream);
+        while ((line = bufferedReader.readLine()) != null) {
+          builder.append(line);
+        }
       } catch (IOException e) {
-          // reset builder to a blank string
-          builder.setLength(0);
+        // reset builder to a blank string
+        builder.setLength(0);
       } finally {
-          IOUtils.closeQuietly(inputStream);
-          IOUtils.closeQuietly(bufferedReader);
+        IOUtils.closeQuietly(inputStream);
+        IOUtils.closeQuietly(bufferedReader);
 
-          log.info("builder: " + builder);
+        log.info("builder: " + builder);
       }
 
       if (builder.length() == 0) {
-          speechOutput =
-              "Sorry, the Concept Map claims service is experiencing a problem. "
-                  + "Please try again later.";
+        speechOutput =
+            "Sorry, the Concept Map claims service is experiencing a problem. "
+                + "Please try again later.";
       } else {
-          try {
-              JSONObject claimsResponseObject = new JSONObject(new JSONTokener(builder.toString()));
+        try {
+          JSONObject claimsResponseObject = new JSONObject(new JSONTokener(builder.toString()));
 
-              if (claimsResponseObject != null) {
-                  ClaimsInfo claimsInfo = createClaimsInfo(claimsResponseObject);
+          if (claimsResponseObject != null) {
+            ClaimsInfo claimsInfo = createClaimsInfo(claimsResponseObject, itemId);
 
-                log.info("claimsInfo: " + claimsInfo);
+            log.info("claimsInfo: " + claimsInfo);
+
+            speechOutput = "Item " + itemValue + " not found";
+
+            if (claimsInfo.getItemLabels().size() > 0) {
+              speechOutput = new StringBuilder()
+                  .append(itemValue)
+                  //.append(claimsInfo.getItemLabels().get(0))
+                  .append(" has been a member of ")
+                  .append(relationshipValue)
+                  .append(" ")
+                  .append(claimsInfo.toItemLabelsSpeech())
+                  .toString();
+            }
 
                   /*
                   speechOutput =
@@ -271,29 +293,33 @@ public class ConceptMapSpeechlet implements Speechlet {
                           .append(".")
                           .toString();
                   */
-              }
-          //} catch (JSONException | ParseException e) {
-          } catch (JSONException e) {
-              log.error("Exception occoured while parsing service response.", e);
           }
+          //} catch (JSONException | ParseException e) {
+        } catch (JSONException e) {
+          log.error("Exception occoured while parsing service response.", e);
+        }
       }
+    }
+    else {
+      speechOutput = "Couldn't locate an Item ID for item " + itemValue;
+    }
 
-      // Create the Simple card content.
-      SimpleCard card = new SimpleCard();
-      card.setTitle("Concept Map");
-      card.setContent(speechOutput);
+    // Create the Simple card content.
+    SimpleCard card = new SimpleCard();
+    card.setTitle("Concept Map");
+    card.setContent(speechOutput);
 
-      // Create the plain text output
-      PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
-      outputSpeech.setText(speechOutput);
+    // Create the plain text output
+    PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
+    outputSpeech.setText(speechOutput);
 
-      return SpeechletResponse.newTellResponse(outputSpeech, card);
+    return SpeechletResponse.newTellResponse(outputSpeech, card);
   }
 
   /**
    * Create an object that contains claims info
    */
-  private ClaimsInfo createClaimsInfo(JSONObject responseObject) throws JSONException { //, ParseException {
+  private ClaimsInfo createClaimsInfo(JSONObject responseObject, String itemId) throws JSONException { //, ParseException {
     ClaimsInfo claimsInfo = new ClaimsInfo();
     JSONArray items = (JSONArray) responseObject.get("item");
 
@@ -302,13 +328,75 @@ public class ConceptMapSpeechlet implements Speechlet {
       ItemInfo itemInfo = new ItemInfo((String)itemInfoJson.get("id"),
           (String)itemInfoJson.get("label"),
           (String)itemInfoJson.get("picture"));
-      if (i == 0) {
+      if (itemInfo.getId().equals(itemId)) {
         claimsInfo.setPictureUrl(itemInfo.getPicture());
       }
-      claimsInfo.getItemLabels().add(itemInfo.getLabel());
+      else {
+        claimsInfo.getItemLabels().add(itemInfo.getLabel());
+      }
     }
     return claimsInfo;
   }
+
+  /**
+   * Call a ConceptMap endpoint to get the Item ID for a given article name
+   *
+   * @throws IOException
+   */
+  private String locateItemId(String itemValue) {
+    String itemId = "";
+
+    String queryString =
+        String.format("?name=%s&lang=en", itemValue);
+    queryString = queryString.replaceAll(" ", "%20");
+    log.info("queryString: " + queryString);
+
+    InputStreamReader inputStream = null;
+    BufferedReader bufferedReader = null;
+    StringBuilder builder = new StringBuilder();
+    try {
+      String line;
+      URL url = new URL(ID_LOCATOR_ENDPOINT + queryString);
+
+      log.info("locateItemId url: " + url);
+
+      inputStream = new InputStreamReader(url.openStream(), Charset.forName("US-ASCII"));
+      bufferedReader = new BufferedReader(inputStream);
+      while ((line = bufferedReader.readLine()) != null) {
+        builder.append(line);
+      }
+    } catch (IOException e) {
+      log.info("IOException e: " + e);
+      // reset builder to a blank string
+      builder.setLength(0);
+    } finally {
+      IOUtils.closeQuietly(inputStream);
+      IOUtils.closeQuietly(bufferedReader);
+
+      log.info("locateItemId builder: " + builder);
+    }
+
+    if (builder.length() > 0) {
+      try {
+        JSONObject idResponseObject = new JSONObject(new JSONTokener(builder.toString()));
+
+        if (idResponseObject != null) {
+          itemId = (String) idResponseObject.get("itemId");
+
+          log.info("locateItemId itemId: " + itemId);
+
+          if (itemId == null) {
+            itemId = "";
+          }
+        }
+      } catch (JSONException e) {
+        log.error("Exception occoured while parsing service response.", e);
+      }
+    }
+
+    return itemId;
+  }
+
 
   /**
    * Wrapper for creating the Ask response from the input strings with
