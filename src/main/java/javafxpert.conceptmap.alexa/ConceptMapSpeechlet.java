@@ -214,6 +214,7 @@ public class ConceptMapSpeechlet implements Speechlet {
   //private SpeechletResponse makeClaimsRequest(String itemId, String propId) {
   private SpeechletResponse makeClaimsRequest(String itemValue, String relationshipValue) {
     String speechOutput = "";
+    Image image = new Image();
 
     // Translate requested item and relationship to Q and P numbers
     //String itemId = "Q887401";
@@ -271,6 +272,7 @@ public class ConceptMapSpeechlet implements Speechlet {
                   .append(claimsInfo.toItemLabelsSpeech())
                   .toString();
             }
+            image.setLargeImageUrl(claimsInfo.getPictureUrl());
 
                   /*
                   speechOutput =
@@ -305,10 +307,10 @@ public class ConceptMapSpeechlet implements Speechlet {
     }
 
     // Create the Simple card content.
-    SimpleCard card = new SimpleCard();
+    StandardCard card = new StandardCard();
     card.setTitle("Concept Map");
-    card.setContent(speechOutput);
-
+    card.setText(speechOutput);
+    card.setImage(image);
     // Create the plain text output
     PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
     outputSpeech.setText(speechOutput);
