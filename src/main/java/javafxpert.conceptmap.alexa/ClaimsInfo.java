@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package javafxpert.conceptmap.alexa.model;
+package javafxpert.conceptmap.alexa;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -51,9 +51,12 @@ public class ClaimsInfo {
 
   public String toItemLabelsSpeech() {
     StringBuffer itemLabelsSpeech = new StringBuffer();
-    if (itemLabels.size() > 1) {
+    if (itemLabels.size() > 0) {
       for (int i = 0; i < itemLabels.size(); i++) {
-        itemLabelsSpeech.append(itemLabels.get(i) + "\n");
+        itemLabelsSpeech.append(itemLabels.get(i) + ",\n");
+        if ((itemLabels.size() > 1) && (i == itemLabels.size() - 2)) {
+          itemLabelsSpeech.append(" and ");
+        }
       }
     }
     return itemLabelsSpeech.toString();

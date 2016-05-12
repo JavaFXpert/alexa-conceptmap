@@ -24,19 +24,22 @@ import com.amazonaws.util.json.JSONException;
 import com.amazonaws.util.json.JSONObject;
 import com.amazonaws.util.json.JSONTokener;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.text.WordUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 //import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 
-import javafxpert.conceptmap.alexa.model.ClaimsInfo;
-import javafxpert.conceptmap.alexa.model.ItemInfo;
+//import javafxpert.conceptmap.alexa.ClaimsInfo;
+//import javafxpert.conceptmap.alexa.ItemInfo;
 
 
 /**
@@ -213,13 +216,14 @@ public class ConceptMapSpeechlet implements Speechlet {
    */
   //private SpeechletResponse makeClaimsRequest(String itemId, String propId) {
   private SpeechletResponse makeClaimsRequest(String itemValue, String relationshipValue) {
+    String properCasedItemValue = WordUtils.capitalize(itemValue);
     String speechOutput = "";
     Image image = new Image();
 
     // Translate requested item and relationship to Q and P numbers
     //String itemId = "Q887401";
     String propId = "P54";
-    String itemId = locateItemId(itemValue);
+    String itemId = locateItemId(properCasedItemValue);
     if (itemId != null && itemId.length() > 0) {
 
       String queryString =
@@ -260,50 +264,36 @@ public class ConceptMapSpeechlet implements Speechlet {
 
             log.info("claimsInfo: " + claimsInfo);
 
-            speechOutput = "Item " + itemValue + " not found";
+            speechOutput = "Item " + properCasedItemValue + " not found";
 
             if (claimsInfo.getItemLabels().size() > 0) {
               speechOutput = new StringBuilder()
-                  .append(itemValue)
+                  .append(properCasedItemValue)
                   //.append(claimsInfo.getItemLabels().get(0))
                   .append(" has been a member of ")
                   .append(relationshipValue)
-                  .append(" ")
+                  .append(" \n")
                   .append(claimsInfo.toItemLabelsSpeech())
                   .toString();
             }
-            image.setLargeImageUrl(claimsInfo.getPictureUrl());
 
-                  /*
-                  speechOutput =
-                      new StringBuilder()
-                          .append(date.speechValue)
-                          .append(" in ")
-                          .append(cityStation.speechValue)
-                          .append(", the first high tide will be around ")
-                          .append(highTideResponse.firstHighTideTime)
-                          .append(", and will peak at about ")
-                          .append(highTideResponse.firstHighTideHeight)
-                          .append(", followed by a low tide at around ")
-                          .append(highTideResponse.lowTideTime)
-                          .append(" that will be about ")
-                          .append(highTideResponse.lowTideHeight)
-                          .append(". The second high tide will be around ")
-                          .append(highTideResponse.secondHighTideTime)
-                          .append(", and will peak at about ")
-                          .append(highTideResponse.secondHighTideHeight)
-                          .append(".")
-                          .toString();
-                  */
+            // Get the picture redirect
+            URL url = new URL(claimsInfo.getPictureUrl());
+            HttpURLConnection.setFollowRedirects(false);
+            final HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            //con.setInstanceFollowRedirects(false);
+            final int responseCode = con.getResponseCode();
+            final String redirectLocation = con.getHeaderField("Location");
+            image.setSmallImageUrl(redirectLocation);
           }
           //} catch (JSONException | ParseException e) {
-        } catch (JSONException e) {
+        } catch (JSONException | IOException e) {
           log.error("Exception occoured while parsing service response.", e);
         }
       }
     }
     else {
-      speechOutput = "Couldn't locate an Item ID for item " + itemValue;
+      speechOutput = "Couldn't locate an Item ID for item " + properCasedItemValue;
     }
 
     // Create the Simple card content.
