@@ -298,7 +298,7 @@ public class ConceptMapSpeechlet implements Speechlet {
 
     // Create the Simple card content.
     StandardCard card = new StandardCard();
-    card.setTitle("Concept Map");
+    card.setTitle(properCasedItemValue);
     card.setText(speechOutput);
     card.setImage(image);
     // Create the plain text output
